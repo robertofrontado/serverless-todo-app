@@ -3,8 +3,9 @@ import * as uuid from 'uuid'
 import { TodoRepository } from '../repositories/TodoRepository'
 import { CreateTodoRequest } from '../requests/CreateTodoRequest'
 import { UpdateTodoRequest } from '../requests/UpdateTodoRequest'
-import { parseUserId } from '../auth/utils'
 import { TodoItem } from '../models/TodoItem'
+
+const bucketName = process.env.TODOS_S3_BUCKET
 
 const todoRepository = new TodoRepository()
 
@@ -12,37 +13,33 @@ export async function getAllTodos(): Promise<TodoItem[]> {
   return todoRepository.getAllTodos()
 }
 
-// export async function getTodoById(id: String): Promise<TodoItem> {
-//   return todoRepository.getTodoById(id);
-// }
+export async function getAllTodosByUserId(userId: string): Promise<TodoItem[]> {
+  return todoRepository.getAllTodosByUserId(userId);
+}
 
-export async function createTodo(createTodoRequest: CreateTodoRequest, jwtToken: string): Promise<TodoItem> {
+export async function createTodo(createTodoRequest: CreateTodoRequest, userId: string): Promise<TodoItem> {
   const todoId = uuid.v4()
-  const userId = parseUserId(jwtToken)
 
   return await todoRepository.createTodo({
-    id: todoId,
-    userId: userId,
+    todoId,
+    userId,
     name: createTodoRequest.name,
     dueDate: createTodoRequest.dueDate,
     done: false,
+    attachmentUrl: `https://${bucketName}.s3.amazonaws.com/${todoId}`,
     createdAt: new Date().toISOString()
   })
 }
 
-export async function updateTodo(updateTodoRequest: UpdateTodoRequest, jwtToken: string) {
-  const userId = parseUserId(jwtToken)
-
+export async function updateTodo(updateTodoRequest: UpdateTodoRequest) {
   return await todoRepository.updateTodo({
-    id: userId,
-    userId: userId,
+    todoId: updateTodoRequest.todoId,
     name: updateTodoRequest.name,
     dueDate: updateTodoRequest.dueDate,
-    done: false,
-    createdAt: new Date().toISOString()
+    done: updateTodoRequest.done
   })
 }
 
-export async function deleteTodo() {
-  
+export async function deleteTodoById(id: string) {
+  return await todoRepository.deleteTodoById(id)
 }
