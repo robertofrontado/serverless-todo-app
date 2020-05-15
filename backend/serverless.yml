@@ -10,7 +10,7 @@ plugins:
 
 custom:
   serverless-offline:
-    port: 3003
+    httpPort: 3003
   dynamodb:
     start:
       port: 8000
@@ -90,6 +90,12 @@ functions:
       - http:
           method: delete
           path: todos/{todoId}
+          cors: true
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:DeleteItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
 
   # TODO: Configure this function
   GenerateUploadUrl:
