@@ -5,14 +5,13 @@ import { DocumentClient } from 'aws-sdk/clients/dynamodb'
 import { TodoItem } from '../models/TodoItem'
 import { UpdateTodoRequest } from '../requests/UpdateTodoRequest'
 
-const XAWS = AWSXRay.captureAWS(AWS)
 
-export class TodoRepository {
+export default class TodoRepository {
 
   constructor(
     private readonly docClient: DocumentClient = createDynamoDBClient(),
-    private readonly todoTable = process.env.TODOS_TABLE,
-    private readonly todoUserIdIndex = process.env.TODOS_USER_ID_INDEX) {
+    private readonly todoTable = process.env.TODOS_TABLE || 'Todos-dev',
+    private readonly todoUserIdIndex = process.env.TODOS_USER_ID_INDEX || 'TodosUserIdIndex') {
   }
 
   async getAllTodosByUserId(userId: string): Promise<TodoItem[]> {
@@ -49,7 +48,7 @@ export class TodoRepository {
   async updateTodo(updateTodoRequest: UpdateTodoRequest): Promise<TodoItem> {
     const updated = await this.docClient.update({
       TableName: this.todoTable,
-      Key: { 'todoId': updateTodoRequest.todoId },
+      Key: { 'todoId': updateTodoRequest.todoId, 'userId': updateTodoRequest.userId },
       UpdateExpression: 'set #name = :name, dueDate = :dueDate, done = :done',
       ExpressionAttributeNames: {
         '#name': 'name'
@@ -59,27 +58,35 @@ export class TodoRepository {
         ':dueDate': updateTodoRequest.dueDate,
         ':done': updateTodoRequest.done
       },
-      ReturnValues: 'UPDATED_NEW'
+      ReturnValues: 'ALL_NEW'
     }).promise()
-
-    return updated[0] as TodoItem
+    
+    return updated.Attributes as TodoItem
   }
   
-  async deleteTodoById(id: string) {
+  async deleteTodo(todoId: string, userId: string) {
     return this.docClient.delete({
       TableName: this.todoTable,
-      Key: { 'todoId': id }
+      Key: { 'todoId': todoId, 'userId': userId }
     }).promise()
   }
 }
 
 function createDynamoDBClient() {
-  if (process.env.IS_OFFLINE) {
-    return new XAWS.DynamoDB.DocumentClient({
+  if (process.env.JEST_WORKER_ID) {
+    return new AWS.DynamoDB.DocumentClient({
       region: 'localhost',
       endpoint: 'http://localhost:8000'
     })
-  }
+  } else {
+    const XAWS = AWSXRay.captureAWS(AWS)  
+    if (process.env.IS_OFFLINE) {
+      return new XAWS.DynamoDB.DocumentClient({
+        region: 'localhost',
+        endpoint: 'http://localhost:8000'
+      })
+    }
 
-  return new XAWS.DynamoDB.DocumentClient()
+    return new XAWS.DynamoDB.DocumentClient()
+  }
 }

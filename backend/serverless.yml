@@ -24,7 +24,7 @@ custom:
       groups:
         sources:
           - table: ${self:provider.environment.TODOS_TABLE}
-            sources: [./seeds/groups.json]
+            sources: [./seeds/todos.json]
     stages:
     - dev
 

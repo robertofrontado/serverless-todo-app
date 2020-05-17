@@ -1,45 +1,50 @@
 import * as uuid from 'uuid'
 
-import { TodoRepository } from '../repositories/TodoRepository'
+import TodoRepository from '../repositories/TodoRepository'
 import { CreateTodoRequest } from '../requests/CreateTodoRequest'
 import { UpdateTodoRequest } from '../requests/UpdateTodoRequest'
 import { TodoItem } from '../models/TodoItem'
 
 const bucketName = process.env.TODOS_S3_BUCKET
 
-const todoRepository = new TodoRepository()
+export class TodoService {
 
-export async function getAllTodos(): Promise<TodoItem[]> {
-  return todoRepository.getAllTodos()
+  todoRepository: TodoRepository;
+
+  constructor(todoRepository: TodoRepository = new TodoRepository()) {
+    this.todoRepository = todoRepository
+  }
+
+  async getAllTodos(): Promise<TodoItem[]> {
+    return this.todoRepository.getAllTodos()
+  }
+
+  async getAllTodosByUserId(userId: string): Promise<TodoItem[]> {
+    return this.todoRepository.getAllTodosByUserId(userId);
+  }
+
+  async createTodo(createTodoRequest: CreateTodoRequest, userId: string): Promise<TodoItem> {
+    const todoId = uuid.v4()
+
+    return await this.todoRepository.createTodo({
+      todoId,
+      userId,
+      name: createTodoRequest.name,
+      dueDate: createTodoRequest.dueDate,
+      done: false,
+      attachmentUrl: `https://${bucketName}.s3.amazonaws.com/${todoId}`,
+      createdAt: new Date().toISOString()
+    })
+  }
+
+  async updateTodo(updateTodoRequest: UpdateTodoRequest) {
+    return await this.todoRepository.updateTodo(updateTodoRequest)
+  }
+
+  async deleteTodo(todoId: string, userId: string) {
+    return await this.todoRepository.deleteTodo(todoId, userId)
+  }
+
 }
 
-export async function getAllTodosByUserId(userId: string): Promise<TodoItem[]> {
-  return todoRepository.getAllTodosByUserId(userId);
-}
-
-export async function createTodo(createTodoRequest: CreateTodoRequest, userId: string): Promise<TodoItem> {
-  const todoId = uuid.v4()
-
-  return await todoRepository.createTodo({
-    todoId,
-    userId,
-    name: createTodoRequest.name,
-    dueDate: createTodoRequest.dueDate,
-    done: false,
-    attachmentUrl: `https://${bucketName}.s3.amazonaws.com/${todoId}`,
-    createdAt: new Date().toISOString()
-  })
-}
-
-export async function updateTodo(updateTodoRequest: UpdateTodoRequest) {
-  return await todoRepository.updateTodo({
-    todoId: updateTodoRequest.todoId,
-    name: updateTodoRequest.name,
-    dueDate: updateTodoRequest.dueDate,
-    done: updateTodoRequest.done
-  })
-}
-
-export async function deleteTodoById(id: string) {
-  return await todoRepository.deleteTodoById(id)
-}
+export default new TodoService();

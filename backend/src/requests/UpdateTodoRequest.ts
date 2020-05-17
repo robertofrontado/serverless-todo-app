@@ -3,6 +3,7 @@
  */
 export interface UpdateTodoRequest {
   todoId: string
+  userId: string
   name: string
   dueDate: string
   done: boolean
